@@ -1,4 +1,5 @@
-import requests
+from gql.transport.requests import RequestsHTTPTransport
+from gql import gql, Client
 import datetime
 
 def log_crm_heartbeat():
@@ -7,18 +8,31 @@ def log_crm_heartbeat():
         f.write(f"{timestamp} CRM is alive\n")
 
 def update_low_stock():
-    url = "http://localhost:8000/graphql"
-    mutation = """
+    # Setup GraphQL transport
+    transport = RequestsHTTPTransport(
+        url="http://localhost:8000/graphql",
+        verify=True,
+        retries=3,
+    )
+
+    # Initialize client
+    client = Client(transport=transport, fetch_schema_from_transport=True)
+
+    # Define mutation
+    mutation = gql("""
     mutation {
       updateLowStockProducts {
         success
         updated
       }
     }
-    """
-    response = requests.post(url, json={'query': mutation})
-    data = response.json().get("data", {}).get("updateLowStockProducts", {})
+    """)
 
+    # Execute mutation
+    result = client.execute(mutation)
+    data = result.get("updateLowStockProducts", {})
+
+    # Log result
     timestamp = datetime.datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
     with open("/tmp/low_stock_updates_log.txt", "a") as f:
         f.write(f"{timestamp} {data}\n")
