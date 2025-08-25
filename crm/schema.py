@@ -19,7 +19,6 @@ from graphene_django.filter import DjangoFilterConnectionField
 from crm.filters import CustomerFilter, OrderFilter, ProductFilter
 from crm.models import Customer, Order, OrderProduct, Product
 
-
 # GraphQL Types
 class CustomerType(DjangoObjectType):
     """GraphQL type for Customer model."""
@@ -378,6 +377,31 @@ class CreateOrder(graphene.Mutation):
             )
 
 
+class UpdateLowStockProducts(graphene.Mutation):
+    """Mutation to update low stock products."""
+    
+    class Arguments:
+        pass  # No arguments needed for this mutation
+
+    # Return fields
+    success = graphene.String()
+    updated = graphene.List(graphene.String)
+
+    @staticmethod
+    def mutate(root, info):
+        """Update low stock products."""
+        updated_products = []
+        low_stock = Product.objects.filter(stock__lt=10)
+        for p in low_stock:
+            p.stock += 10
+            p.save()
+            updated_products.append(f"{p.name}: {p.stock}")
+        return UpdateLowStockProducts(
+            success="Low stock updated", 
+            updated=updated_products
+        )
+
+
 # Query Class
 class Query(graphene.ObjectType):
     """
@@ -434,11 +458,7 @@ class Query(graphene.ObjectType):
         """
         return "Hello, GraphQL!"
 
-    # def resolve_all_customers(self, info):
-    #     """Get all customers."""
-    #     return Customer.objects.all()
-
-    def resolve_all_customers(self, info, filter=None, order_by=None):
+    def resolve_all_customers(self, info, filter=None, order_by=None, **kwargs):
         qs = Customer.objects.all()
         if filter:
             f = {}
@@ -469,11 +489,7 @@ class Query(graphene.ObjectType):
         except Customer.DoesNotExist:
             return None
 
-    # def resolve_all_products(self, info):
-    #     """Get all products."""
-    #     return Product.objects.all()
-
-    def resolve_all_products(self, info, filter=None, order_by=None):
+    def resolve_all_products(self, info, filter=None, order_by=None, **kwargs):
         qs = Product.objects.all()
         if filter:
             f = {}
@@ -502,13 +518,7 @@ class Query(graphene.ObjectType):
         except Product.DoesNotExist:
             return None
 
-    # def resolve_all_orders(self, info):
-    #     """Get all orders with related data."""
-    #     return (
-    #         Order.objects.select_related("customer").prefetch_related("products").all()
-    #     )
-
-    def resolve_all_orders(self, info, filter=None, order_by=None):
+    def resolve_all_orders(self, info, filter=None, order_by=None, **kwargs):
         qs = Order.objects.select_related("customer").prefetch_related("products").all()
         if filter:
             f = {}
@@ -558,3 +568,8 @@ class Mutation(graphene.ObjectType):
     bulk_create_customers = BulkCreateCustomers.Field()
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
+    update_low_stock_products = UpdateLowStockProducts.Field()
+
+
+# Create the schema
+schema = graphene.Schema(query=Query, mutation=Mutation)
