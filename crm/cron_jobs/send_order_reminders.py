@@ -1,8 +1,19 @@
-import requests
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 import datetime
 
-url = "http://localhost:8000/graphql"
-query = """
+# Setup GraphQL transport
+transport = RequestsHTTPTransport(
+    url="http://localhost:8000/graphql",
+    verify=True,
+    retries=3,
+)
+
+# Initialize client
+client = Client(transport=transport, fetch_schema_from_transport=True)
+
+# Define query
+query = gql("""
 query {
   ordersWithinLastWeek {
     id
@@ -11,11 +22,13 @@ query {
     }
   }
 }
-"""
+""")
 
-response = requests.post(url, json={'query': query})
-orders = response.json().get("data", {}).get("ordersWithinLastWeek", [])
+# Execute query
+result = client.execute(query)
+orders = result.get("ordersWithinLastWeek", [])
 
+# Write results to log
 timestamp = datetime.datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
 with open("/tmp/order_reminders_log.txt", "a") as f:
     for order in orders:
