@@ -8,6 +8,7 @@ related to customer relationship management functionality.
 """
 
 import re
+from crm.models import Product
 from datetime import datetime
 from decimal import Decimal
 
@@ -17,7 +18,7 @@ from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 
 from crm.filters import CustomerFilter, OrderFilter, ProductFilter
-from crm.models import Customer, Order, OrderProduct, Product
+from crm.models import Customer, Order, OrderProduct
 
 # GraphQL Types
 class CustomerType(DjangoObjectType):
